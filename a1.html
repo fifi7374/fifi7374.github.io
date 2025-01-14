@@ -4,15 +4,70 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, maximum-scale=1.0" />
 
-    <title>Example Student's HCDE 439 Physical Computing Page!</title>
+    <title>fifi's HCDE 439 Physical Computing Page!</title>
 
     <link href="style.css" rel="stylesheet" type="text/css" />
   </head>
   <body>
-    <h1>Example Student's Assignment 1!</h1>
+    <h1>fifi's Assignment 1!</h1>
     <div class="header">
-      <img src="red-panda.jpg" />
       <p>Here is all the documentation for assignment 1!</p>
+    </div>
+    <div>
+      <img src="ezgif-6-b9ab595f39.gif" style="display: block; margin: auto;" />
+      <p>This is my circuit's operation</p>
+    </div>>
+    <div>
+      <img src="20250113161031.jpg" style="display: block; margin: auto;" />
+      <p>This is my Calculation formula</p>
+    </div>
+    <div>
+      <img src="20250113161130.jpg" style="display: block; margin: auto;" />
+      <p>This is my schematic</p>
+    </div>
+    <div>
+      <pre><code>
+        // the setup function runs once when you press reset or power the board
+        void setup() {
+          pinMode(7, OUTPUT);// initialize digital pin 7 as an output.
+          pinMode(8, OUTPUT);// initialize digital pin 8 as an output.
+          pinMode(10, OUTPUT);// initialize digital pin 10 as an output.
+        }
+        
+        // the loop function runs over and over again forever
+        void loop() {
+          // Turn on red LED at pin 7, turn off LEDs at pins 8 and 10
+          digitalWrite(7, HIGH); // Set pin 7 HIGH (turn LED on)
+          delay(100);            // Wait for 100 milliseconds
+          digitalWrite(10, LOW); // Set pin 7 LOW (turn LED off)
+          delay(100);            // Wait for 100 milliseconds
+          
+          // Turn on green LED at pin 8, turn off LEDs at pins 7 and 10
+          digitalWrite(8, HIGH); // Set pin 8 HIGH (turn LED on)
+          delay(300);            // Wait for 300 milliseconds
+          digitalWrite(8, LOW); // Set pin 8 LOW (turn LED off)
+          delay(300);            // Wait for 300 milliseconds
+          
+          // Turn on blue LED at pin 10, turn off LEDs at pins 7 and 8
+          digitalWrite(10, HIGH); // Set pin 10 HIGH (turn LED on)
+          delay(600);             // Wait for 600 milliseconds
+          digitalWrite(10, LOW);   // Set pin 10 LOW (turn LED off)
+          delay(600);             // Wait for 600 milliseconds
+        }
+        </code></pre>
+        <p>This is my code</p>
+    </div>
+    <div>
+      <p>Qustion 1</p>
+      <img src="20250113164638.jpg" style="display: block; margin: auto;" />
+    </div>
+    <div>
+      <p>Qustion 2</p>
+      <p>The Arduino Uno can provide about 200 mA in total, and each LED consumes 20 mA when it is on. So 200/20 = 10. The result is 10 LED lights. </p>
+    </div>
+    <div>
+      <p>Qustion 3</p>
+      <p>I test it, its 10ms</p>
     </div>
   </body>
 </html>
