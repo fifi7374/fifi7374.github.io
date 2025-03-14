@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0" />
+
+    <title>fifi's HCDE 439 Physical Computing Page!</title>
+
+    <link href="style.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <h1>fifi's final project, I design a product for children. The product combine by a sensor part, and a light part. user can put the sensor part next to the door, and when people open the door the light part connect to the laptop will make the web page change, also the light will flash. also for make parents will buy this product for kids, so I use a night light cover for the real use, and the product will call A+ light, normally when u have movement the light will fading. </h1>
+    <div class="header">
+      <p style="font-size: 18px; font-weight: bold;">Here is all the documentation for final</p>
+    </div>
+    <div>
+      <p style="font-size: 18px; font-weight: bold;">This is my schematic</p>
+      <img src="20250313220108.jpg" style="display: block; margin: auto;" />
+      <p>I use a button, a LDR resistor, and also a Green led light.</p>
+      <img src="20250313220158.jpg" style="display: block; margin: auto;" />
+      <p>Use the Xiao-seeed esp32s3 board to achieve the wifi communicate with my laptop. and another image show how the ardunio uno board contorl the three led lights to fading and flash</p>
+    </div>
+    <div>
+      <p style="font-size: 18px; font-weight: bold;">This is my circuit</p>
+      <img src="20250314010023.jpg" style="display: block; margin: auto;" />
+      <img src="20250314010219.jpg" style="display: block; margin: auto;" />
+      <img src="20250314010331.jpg" style="display: block; margin: auto;" />
+      <p>the 3 white led lights connect to pin 3, pin 5 and pin 6. and the untrosonic sensor connect wiht the seeed esp32s3 board to detect the distance</p>
+    </div>
+    <div>
+      <p style="font-size: 18px; font-weight: bold;">This is my firmware 1(index.js)</p>
+      <pre><code>
+        let currentMode = "note"; // Default mode is game
+        let nightLightMode = false; // Track if Night Light Mode is active
+        let lastDistance = null; // Store the last measured distance
+        let gameVideoElement;
+        let port; // Serial port for Arduino Uno
+
+        // Function to fetch distance data from XIAO ESP32-S3
+        async function fetchDistance() {
+            try {
+                let response = await fetch("http://192.168.4.1/distance");
+                let distance = await response.text();
+                distance = parseInt(distance); // Convert to integer
+                console.log("📡 Distance Received:", distance);
+
+                document.getElementById("distanceDisplay").innerText = "Distance: " + distance + " cm";
+
+                if (nightLightMode) {
+                    if (distance < 20 && lastDistance >= 20) { // Only trigger when crossing 20cm threshold
+                        sendCommandToArduino("NIGHT_LIGHT"); // Activate night light fading
+                    } else if (distance >= 20 && lastDistance < 20) {
+                        setTimeout(() => {
+                            sendCommandToArduino("NIGHT_LIGHT_OFF"); // Delay turning off to allow fading to finish
+                        }, 4000);
+                    }
+                } else {
+                    // If distance < 20cm, switch to Note Mode
+                    if (distance < 20 && currentMode === "game") {
+                        switchToNote();
+                        sendCommandToArduino("LED_ON"); // Flash LED on Arduino Uno
+                    } else if (distance >= 20 && currentMode === "note") {
+                        sendCommandToArduino("LED_OFF"); // Turn off LED
+                    }
+                }
+
+                lastDistance = distance;
+            } catch (error) {
+                console.error(" Failed to Fetch Distance:", error);
+            }
+        }
+
+        // Fetch distance every 1 second
+        setInterval(fetchDistance, 100);
+
+        // Function to switch to Game Mode (Video)
+        function switchToGame() {
+            currentMode = "game";
+            nightLightMode = false;
+
+            document.body.innerHTML = `
+                <!--<video id="backgroundVideo" autoplay loop muted>
+                    <source src="game.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <div class="overlay">
+                    <p id="distanceDisplay">Waiting for sensor data...</p>
+                    <button id="gameBtn">Game</button>
+                    <button id="noteBtn">Note</button>
+                    <button id="nightLightBtn">Night Light</button>
+                    <button id="connectBtn">Connect Arduino</button>
+                </div>-->
+            `;
+
+            gameVideoElement = document.getElementById("backgroundVideo");
+            gameVideoElement.play();
+
+            addEventListeners();
+        }
+
+        // Function to switch to Note Mode (Image)
+        function switchToNote() {
+            currentMode = "note";
+            nightLightMode = false;
+            
+            if (gameVideoElement) {
+                gameVideoElement.pause();
+            }
+
+            document.body.innerHTML = `
+                <!--<div id="backgroundImage"></div>
+                <div class="overlay">
+                    <p id="distanceDisplay">Waiting for sensor data...</p>
+                    <button id="gameBtn">Game</button>
+                    <button id="noteBtn">Note</button>
+                    <button id="nightLightBtn">Night Light</button>
+                    <button id="connectBtn">Connect Arduino</button>
+                </div>-->
+            `;
+
+            addEventListeners();
+        }
+
+        // Function to enable Night Light Mode
+        function enableNightLight() {
+            nightLightMode = true;
+            currentMode = "nightLight";
+
+            // Set background to black and show Night Light Mode text
+            document.body.className = "night-mode";
+            document.body.innerHTML = `
+                <!--<div class="night-light-text">Night Light Mode</div>
+                <div class="overlay">
+                    <p id="distanceDisplay">Waiting for sensor data...</p>
+                    <button id="gameBtn">Game</button>
+                    <button id="noteBtn">Note</button>
+                    <button id="nightLightBtn">Night Light</button>
+                    <button id="connectBtn">Connect Arduino</button>
+                </div>-->
+            `;
+
+            addEventListeners();
+        }
+
+        // Function to re-add button event listeners after updating the page
+        function addEventListeners() {
+            document.getElementById("gameBtn").addEventListener("click", switchToGame);
+            document.getElementById("noteBtn").addEventListener("click", switchToNote);
+            document.getElementById("nightLightBtn").addEventListener("click", enableNightLight);
+            document.getElementById("connectBtn").addEventListener("click", connectArduino);
+        }
+
+        // Function to connect to Arduino Uno via Serial
+        async function connectArduino() {
+            try {
+                port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 9600 });
+                console.log(" Connected to Arduino Uno via Serial!");
+            } catch (error) {
+                console.error(" Failed to connect to Arduino: " + error);
+            }
+        }
+
+        // Function to send command to Arduino Uno
+        async function sendCommandToArduino(command) {
+            if (port && port.writable) {
+                const writer = port.writable.getWriter();
+                await writer.write(new TextEncoder().encode(command + "\n"));
+                writer.releaseLock();
+            } else {
+                console.error(" Serial Port is not open!");
+            }
+        }
+
+        // Initialize with game mode
+        document.addEventListener("DOMContentLoaded", () => {
+            switchToGame();
+        });
+
+      </code></pre>
+    </div>
+    <div>
+        <p style="font-size: 18px; font-weight: bold;">This is my firmware 2 for seeed esp32s3 with sensor(sketch.ino)</p>
+        <pre><code>
+            #include <WiFi.h>
+            #include <WebServer.h>
+                
+            #define TRIG_PIN D3  // GPIO3 for trigger
+            #define ECHO_PIN D2  // GPIO2 for echo
+                
+            const char* ssid = "XIAO_WIFI";  // Wi-Fi network name
+            const char* password = "12345678";  // Wi-Fi password (must be at least 8 characters)
+                
+            WebServer server(80);  // Create a web server on port 80
+                
+            void setup() {
+                Serial.begin(115200);
+                pinMode(TRIG_PIN, OUTPUT);
+                pinMode(ECHO_PIN, INPUT);
+                
+                //  Start Wi-Fi in Access Point mode
+                WiFi.mode(WIFI_AP);
+                WiFi.softAP(ssid, password);
+                WiFi.softAPConfig(IPAddress(192,168,4,1), IPAddress(192,168,4,1), IPAddress(255,255,255,0));
+                IPAddress myIP = WiFi.softAPIP();
+                
+                Serial.print(" Wi-Fi Started! Connect to SSID: ");
+                Serial.println(ssid);
+                Serial.print("📡 Access Point IP Address: ");
+                Serial.println(myIP);
+                
+                // Define API endpoint to get sensor data with CORS support
+                server.on("/distance", HTTP_GET, []() {
+                    long distance = measureDistance();
+                
+                    // Fix CORS issue: Allow all origins
+                    server.sendHeader("Access-Control-Allow-Origin", "*");
+                    server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                    server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+                
+                    server.send(200, "text/plain", String(distance));
+                });
+                
+                  //  Handle CORS preflight request
+                server.onNotFound([]() {
+                    if (server.method() == HTTP_OPTIONS) {
+                        server.sendHeader("Access-Control-Allow-Origin", "*");
+                        server.sendHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+                        server.sendHeader("Access-Control-Allow-Headers", "Content-Type");
+                        server.send(204);  // 204 No Content (preflight response)
+                        } else {
+                            server.send(404, "text/plain", "Not Found");
+                        }
+                    });
+                
+                  server.begin();
+                  Serial.println(" Web Server Started!");
+                }
+                
+                void loop() {
+                  server.handleClient();  // Handle web requests
+                
+                  long distance = measureDistance();
+                
+                  // Print the distance to Serial Monitor
+                  Serial.print("📡 Distance: ");
+                  Serial.print(distance);
+                  Serial.println(" cm");
+                
+                  delay(500);
+                }
+                
+                // 📡 Function to measure ultrasonic distance
+                long measureDistance() {
+                  digitalWrite(TRIG_PIN, LOW);
+                  delayMicroseconds(2);
+                  digitalWrite(TRIG_PIN, HIGH);
+                  delayMicroseconds(10);
+                  digitalWrite(TRIG_PIN, LOW);
+                
+                  long duration = pulseIn(ECHO_PIN, HIGH, 30000);
+                  int distance = duration * 0.034 / 2;
+                
+                  if (distance == 0 || distance > 400) {
+                    Serial.println("No valid distance measured.");
+                    return -1; // Return -1 for invalid readings
+                  }
+                
+                  return distance;
+                }
+
+      </code></pre>
+    </div>
+    <div style="text-align: center; margin-top: 30px;">
+        <p style="font-size: 18px; font-weight: bold;">Watch my project demo video:</p>
+        <a href="https://vimeo.com/1065825630?share=copy" target="_blank" style="font-size: 18px; color: blue; text-decoration: underline;">Click here to watch on Vimeo</a>
+      </div>
+  </body>
+</html>
